@@ -2,7 +2,7 @@
 
 All notable changes to Glance CLI are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org).
 
-## [0.1.0] - 2026-10-21
+## [0.1.0] - 2026-10-13
 
 The first release.
 
