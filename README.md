@@ -12,7 +12,7 @@ Every core, the GPU, the Neural Engine, power, temperature, memory, network, dis
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-macOS%2014%2B-black)
 ![Apple silicon](https://img.shields.io/badge/Apple-silicon-orange)
-![Rust](https://img.shields.io/badge/rust-1.85%2B-dea584)
+![Rust](https://img.shields.io/badge/rust-1.88%2B-dea584)
 
 ![Glance CLI live view](docs/screenshot.svg)
 
@@ -66,7 +66,7 @@ glance
 
 The binary is not notarized. If you download it with a browser, run `xattr -d com.apple.quarantine glance` first.
 
-Or install with Cargo, which needs Rust 1.85 or later ([rustup.rs](https://rustup.rs)):
+Or install with Cargo, which needs Rust 1.88 or later ([rustup.rs](https://rustup.rs)):
 
 ```bash
 cargo install --git https://github.com/TianMingNanWei/glance-cli
@@ -171,7 +171,7 @@ cargo fmt && cargo build --release  # format and build
 
 Every push and pull request runs two required checks:
 
-- **Test**: `cargo fmt --check`, `cargo clippy -D warnings`, unit tests, and an off-screen frame on macOS 14 and macOS 26, plus `cargo check` on Rust 1.85.
+- **Test**: `cargo fmt --check`, `cargo clippy -D warnings`, unit tests, and an off-screen frame on macOS 14 and macOS 26, plus `cargo check` on Rust 1.88.
 - **Build**: release builds for Apple silicon and Intel, merged into a universal binary, smoke-tested, and uploaded as an artifact.
 
 Pushing a `v*` tag that matches the version in `Cargo.toml` runs **Release**, which tests, builds, packages universal, arm64, and x86_64 archives with `SHA256SUMS`, and publishes a GitHub release using that version's section of [CHANGELOG.md](CHANGELOG.md).

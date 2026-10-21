@@ -47,12 +47,12 @@ jobs:
         run: GLANCE_COLS=120 GLANCE_ROWS=34 cargo test --locked render_preview -- --ignored
 
   msrv:
-    name: Minimum Rust (1.85)
+    name: Minimum Rust (1.88)
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v7
 
-      - uses: dtolnay/rust-toolchain@1.85
+      - uses: dtolnay/rust-toolchain@1.88
 
       - uses: Swatinem/rust-cache@v2
 
