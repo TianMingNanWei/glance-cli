@@ -140,10 +140,10 @@ impl Topology {
         } else if level_count > 1 {
             let mut levels = Vec::new();
             for level in (0..level_count).rev() {
-                levels.extend(
-                    std::iter::repeat(level as u32)
-                        .take(counts.get(level).copied().unwrap_or(0) as usize),
-                );
+                levels.extend(std::iter::repeat_n(
+                    level as u32,
+                    counts.get(level).copied().unwrap_or(0) as usize,
+                ));
             }
             let kinds = if level_count == 2 {
                 vec!["P".into(), "E".into()]

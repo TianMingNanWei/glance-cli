@@ -1,0 +1,113 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  release:
+    name: Release
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin, x86_64-apple-darwin
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Check the tag matches Cargo.toml
+        id: version
+        run: |
+          version="$(cargo metadata --no-deps --format-version 1 | python3 -c "import json, sys; print(json.load(sys.stdin)['packages'][0]['version'])")"
+          if [ "${GITHUB_REF_NAME}" != "v${version}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match Cargo.toml version ${version}"
+            exit 1
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Test
+        run: cargo test --locked
+
+      - name: Build
+        run: |
+          cargo build --release --locked --target aarch64-apple-darwin
+          cargo build --release --locked --target x86_64-apple-darwin
+
+      - name: Package
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          mkdir -p dist
+          lipo -create -output target/glance-universal \
+            target/aarch64-apple-darwin/release/glance \
+            target/x86_64-apple-darwin/release/glance
+          package() {
+            name="glance-${VERSION}-macos-$1"
+            mkdir -p "stage/${name}"
+            cp "$2" "stage/${name}/glance"
+            cp README.md LICENSE CHANGELOG.md "stage/${name}/"
+            tar -C stage -czf "dist/${name}.tar.gz" "${name}"
+          }
+          package universal target/glance-universal
+          package arm64 target/aarch64-apple-darwin/release/glance
+          package x86_64 target/x86_64-apple-darwin/release/glance
+          (cd dist && shasum -a 256 -- *.tar.gz > SHA256SUMS)
+          cat dist/SHA256SUMS
+          "stage/glance-${VERSION}-macos-universal/glance" --version
+
+      - name: Write release notes
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          {
+            # The changelog section for this version, without its heading.
+            awk -v version="${VERSION}" '
+              $0 ~ "^## \\[?" version "\\]?" { found = 1; next }
+              found && /^## / { exit }
+              found && /^\[[^]]+\]: / { next }
+              found { print }
+            ' CHANGELOG.md
+            cat <<EOF
+
+          ## Install
+
+          \`\`\`bash
+          curl -LO https://github.com/${GITHUB_REPOSITORY}/releases/download/v${VERSION}/glance-${VERSION}-macos-universal.tar.gz
+          tar -xzf glance-${VERSION}-macos-universal.tar.gz
+          sudo install glance-${VERSION}-macos-universal/glance /usr/local/bin/glance
+          glance
+          \`\`\`
+
+          Or build from source: \`cargo install --git https://github.com/${GITHUB_REPOSITORY} --tag v${VERSION}\`
+
+          The binary is not notarized. If you download it with a browser, clear the quarantine flag first: \`xattr -d com.apple.quarantine glance\`.
+
+          | File | For |
+          | --- | --- |
+          | \`glance-${VERSION}-macos-universal.tar.gz\` | Apple silicon and Intel |
+          | \`glance-${VERSION}-macos-arm64.tar.gz\` | Apple silicon only |
+          | \`glance-${VERSION}-macos-x86_64.tar.gz\` | Intel only |
+          | \`SHA256SUMS\` | Checksums for the archives |
+
+          Requires macOS 14 or later. Power, frequency, and Neural Engine readings need Apple silicon.
+          EOF
+          } > release-notes.md
+          cat release-notes.md
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" dist/*.tar.gz dist/SHA256SUMS \
+            --verify-tag \
+            --title "Glance CLI ${VERSION}" \
+            --notes-file release-notes.md

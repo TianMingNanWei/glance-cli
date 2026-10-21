@@ -61,8 +61,8 @@ impl SocMath {
     /// publish CPU tables. A table of voltages alone is rejected.
     pub fn frequencies(data: &[u8]) -> Vec<f64> {
         let mut values = Vec::new();
-        for chunk in data.chunks_exact(8) {
-            let frequency = u32::from_le_bytes(chunk[0..4].try_into().unwrap_or([0; 4]));
+        for chunk in data.as_chunks::<8>().0 {
+            let frequency = u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]);
             if frequency > 1 {
                 values.push(frequency as f64);
             }
