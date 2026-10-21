@@ -41,7 +41,6 @@ unsafe extern "C" {
 }
 
 pub struct ProcessSampler {
-    pub sort_by_memory: bool,
     previous: HashMap<i32, (u64, Instant)>,
     bundles: HashMap<String, String>,
 }
@@ -49,7 +48,6 @@ pub struct ProcessSampler {
 impl ProcessSampler {
     pub fn new() -> Self {
         Self {
-            sort_by_memory: false,
             previous: HashMap::new(),
             bundles: HashMap::new(),
         }
@@ -74,19 +72,14 @@ impl ProcessSampler {
                 records.push(record);
             }
         }
-        if self.sort_by_memory {
-            records.sort_by(|left, right| right.memory_bytes.cmp(&left.memory_bytes));
-        } else {
-            records.sort_by(|left, right| {
-                right
-                    .cpu
-                    .partial_cmp(&left.cpu)
-                    .unwrap_or(std::cmp::Ordering::Equal)
-            });
-        }
+        records.sort_by(|left, right| {
+            right
+                .cpu
+                .partial_cmp(&left.cpu)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         self.previous
             .retain(|_, (_, seen)| now.duration_since(*seen).as_secs() < 30);
-        records.truncate(80);
         records
     }
 

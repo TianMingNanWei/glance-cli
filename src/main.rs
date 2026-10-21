@@ -1,3 +1,5 @@
+mod about;
+mod anim;
 mod cf;
 mod format;
 mod model;
@@ -9,12 +11,16 @@ use crate::format::{bytes, bytes_per_second, celsius, hertz, percent, watts};
 use crate::model::Snapshot;
 use crate::sample::Sampler;
 use std::io::{self, IsTerminal};
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.first().map(String::as_str) {
         Some("-h") | Some("--help") | Some("help") => print_help(),
+        Some("-V") | Some("--version") | Some("version") => {
+            println!("glance {}", about::VERSION)
+        }
+        Some("about") => print_about(),
         Some("snapshot") => snapshot(args.iter().any(|arg| arg == "--json")),
         Some(other) => {
             eprintln!("unknown command '{other}'. Try `glance --help`.");
@@ -38,12 +44,41 @@ Usage:
   glance                 live view, one screen, no paging
   glance snapshot        print one reading
   glance snapshot --json print one reading as JSON
+  glance about           author, version, license, and source
+  glance --version       print the version
 
-Keys in the live view:
-  q                      quit
-  c                      sort processes by CPU
-  m                      sort processes by memory"
+Keys in the live view (press ? for all of them):
+  q / Esc                quit
+  /                      search processes
+  c m p n t  r           sort by CPU, memory, PID, name, threads; reverse
+  x / X                  stop / force quit the selected process
+  space  + -  a          pause, refresh speed, animations"
     );
+}
+
+fn print_about() {
+    let color = std::io::stdout().is_terminal();
+    for (index, line) in about::BANNER.iter().enumerate() {
+        if color {
+            let (r, g, b) = [
+                (90, 200, 255),
+                (120, 180, 255),
+                (150, 150, 255),
+                (190, 120, 255),
+                (230, 115, 225),
+                (255, 110, 200),
+            ][index];
+            println!("\x1b[1;38;2;{r};{g};{b}m{line}\x1b[0m");
+        } else {
+            println!("{line}");
+        }
+    }
+    println!();
+    println!("{} — {}", about::NAME, about::DESCRIPTION);
+    println!();
+    for (label, value) in about::details() {
+        println!("  {label:<11} {value}");
+    }
 }
 
 fn snapshot(json: bool) {
@@ -163,6 +198,39 @@ fn print_reading(reading: &Snapshot) {
             .map(watts)
             .unwrap_or_else(|| "n/a".into())
     );
+    if let Some(battery) = &reading.battery {
+        let state = if battery.charging {
+            "charging"
+        } else if battery.external_power {
+            "on AC"
+        } else {
+            "on battery"
+        };
+        let flow = battery
+            .battery_watts
+            .map(|flow| format!("{flow:+.2} W"))
+            .unwrap_or_else(|| "n/a".into());
+        println!(
+            "Battery {}  {state}  battery {flow}",
+            percent(battery.fraction)
+        );
+        if let Some(charger) = &battery.charger {
+            let optional = |value: Option<f64>, unit: &str, digits: usize| {
+                value
+                    .map(|value| format!("{value:.digits$} {unit}"))
+                    .unwrap_or_else(|| "n/a".into())
+            };
+            println!(
+                "Charger rated {} ({}, {})  input {} ({}, {})",
+                optional(charger.rated_watts, "W", 0),
+                optional(charger.rated_volts, "V", 1),
+                optional(charger.rated_amps, "A", 2),
+                optional(charger.input_watts, "W", 1),
+                optional(charger.input_volts, "V", 2),
+                optional(charger.input_amps, "A", 2),
+            );
+        }
+    }
     println!(
         "Memory {} / {}  pressure {}",
         bytes(reading.memory.used_bytes),
@@ -193,29 +261,36 @@ fn live() -> io::Result<()> {
         std::process::exit(1);
     }
     let mut sampler = Sampler::new();
-    let mut history = tui::History::default();
+    let mut app = tui::App::new();
     let mut reading = sampler.sample(true);
-    history.push(&reading);
+    app.history.push(&reading, 0.3);
     let mut terminal = ratatui::init();
     let _guard = TerminalGuard;
+    crossterm::execute!(io::stdout(), crossterm::event::EnableMouseCapture)?;
     let mut last = Instant::now();
     loop {
-        terminal.draw(|frame| tui::draw(frame, &reading, &history))?;
-        if crossterm::event::poll(Duration::from_millis(200))? {
-            if let crossterm::event::Event::Key(key) = crossterm::event::read()? {
-                use crossterm::event::{KeyCode, KeyModifiers};
-                match key.code {
-                    KeyCode::Char('q') | KeyCode::Esc => break,
-                    KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => break,
-                    KeyCode::Char('c') => sampler.set_sort_by_memory(false),
-                    KeyCode::Char('m') => sampler.set_sort_by_memory(true),
-                    _ => {}
+        app.refresh_progress = (last.elapsed().as_secs_f64() / app.interval.as_secs_f64()).min(1.0);
+        app.anim.tick();
+        terminal.draw(|frame| tui::draw(frame, &mut app, &reading))?;
+        let wait = app
+            .frame_interval()
+            .min(app.interval.saturating_sub(last.elapsed()));
+        if crossterm::event::poll(wait)? {
+            use crossterm::event::{Event, KeyEventKind};
+            match crossterm::event::read()? {
+                Event::Key(key) if key.kind == KeyEventKind::Press => {
+                    if app.handle_key(key, &reading) {
+                        break;
+                    }
                 }
+                Event::Mouse(mouse) => app.handle_mouse(mouse, &reading),
+                _ => {}
             }
         }
-        if last.elapsed() >= Duration::from_secs(1) {
+        if !app.paused && last.elapsed() >= app.interval {
+            let seconds = last.elapsed().as_secs_f64();
             reading = sampler.sample(true);
-            history.push(&reading);
+            app.history.push(&reading, seconds);
             last = Instant::now();
         }
     }
@@ -226,6 +301,7 @@ struct TerminalGuard;
 
 impl Drop for TerminalGuard {
     fn drop(&mut self) {
+        let _ = crossterm::execute!(io::stdout(), crossterm::event::DisableMouseCapture);
         ratatui::restore();
     }
 }

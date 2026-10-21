@@ -1,5 +1,5 @@
 use crate::cf::{self, CFRelease};
-use crate::model::{Battery, Disk};
+use crate::model::{Battery, Charger, Disk};
 use std::time::Instant;
 
 pub struct DiskSampler {
@@ -99,8 +99,10 @@ pub fn battery() -> Option<Battery> {
     for index in 0..count {
         let source = unsafe { cf::CFArrayGetValueAtIndex(list, index) };
         let description = unsafe { IOPSGetPowerSourceDescription(blob, source) };
-        let present = cf::number_f64(cf::dict_get(description, "Is Present")).unwrap_or(0.0) > 0.0
-            || cf::string(cf::dict_get(description, "Is Present")).as_deref() == Some("Yes");
+        let flag = cf::dict_get(description, "Is Present");
+        let present = cf::boolean(flag)
+            .or_else(|| cf::number_f64(flag).map(|value| value > 0.0))
+            .unwrap_or(false);
         if !present {
             continue;
         }
@@ -111,11 +113,27 @@ pub fn battery() -> Option<Battery> {
         } else {
             0.0
         };
-        let (health, cycles) = smart_battery();
+        let smart = smart_battery();
+        let charging = cf::boolean(cf::dict_get(description, "Is Charging")).unwrap_or(false);
+        let external_power = cf::string(cf::dict_get(description, "Power Source State"))
+            .is_some_and(|state| state == "AC Power");
+        let remaining_key = if charging {
+            "Time to Full Charge"
+        } else {
+            "Time to Empty"
+        };
+        let minutes_remaining = cf::number_f64(cf::dict_get(description, remaining_key))
+            .filter(|minutes| *minutes > 0.0)
+            .map(|minutes| minutes as u32);
         found = Some(Battery {
             fraction,
-            health,
-            cycles,
+            health: smart.health,
+            cycles: smart.cycles,
+            charging,
+            external_power,
+            minutes_remaining,
+            battery_watts: smart.battery_watts,
+            charger: if external_power { smart.charger } else { None },
         });
         break;
     }
@@ -126,28 +144,68 @@ pub fn battery() -> Option<Battery> {
     found
 }
 
-fn smart_battery() -> (Option<f64>, Option<u32>) {
+#[derive(Default)]
+struct SmartBattery {
+    health: Option<f64>,
+    cycles: Option<u32>,
+    battery_watts: Option<f64>,
+    charger: Option<Charger>,
+}
+
+fn smart_battery() -> SmartBattery {
     let services = cf::services("AppleSmartBattery");
     let Some(service) = services.first().copied() else {
-        return (None, None);
+        return SmartBattery::default();
     };
     let properties = cf::entry_properties(service);
     for extra in services {
         unsafe { cf::IOObjectRelease(extra) };
     }
     if properties.is_null() {
-        return (None, None);
+        return SmartBattery::default();
     }
-    let design = cf::number_f64(cf::dict_get(properties, "DesignCapacity")).unwrap_or(0.0);
-    let raw = cf::number_f64(cf::dict_get(properties, "AppleRawMaxCapacity"))
-        .or_else(|| cf::number_f64(cf::dict_get(properties, "NominalChargeCapacity")))
+    let number = |dict, key| cf::number_f64(cf::dict_get(dict, key));
+    let design = number(properties, "DesignCapacity").unwrap_or(0.0);
+    let raw = number(properties, "AppleRawMaxCapacity")
+        .or_else(|| number(properties, "NominalChargeCapacity"))
         .unwrap_or(0.0);
     let health = if design > 0.0 && raw > 0.0 {
         Some((raw / design).clamp(0.0, 1.0))
     } else {
         None
     };
-    let cycles = cf::number_f64(cf::dict_get(properties, "CycleCount")).map(|value| value as u32);
+    let cycles = number(properties, "CycleCount").map(|value| value as u32);
+    // Amperage is in mA and Voltage in mV, so the product is in µW.
+    let battery_watts = match (
+        number(properties, "InstantAmperage").or_else(|| number(properties, "Amperage")),
+        number(properties, "Voltage"),
+    ) {
+        (Some(milliamps), Some(millivolts)) if millivolts > 0.0 => {
+            Some(milliamps * millivolts / 1_000_000.0)
+        }
+        _ => None,
+    };
+    let adapter = cf::dict_get(properties, "AdapterDetails");
+    let telemetry = cf::dict_get(properties, "PowerTelemetryData");
+    let milli = |dict, key| {
+        number(dict, key)
+            .filter(|value| *value > 0.0)
+            .map(|value| value / 1000.0)
+    };
+    let charger = (!adapter.is_null() || !telemetry.is_null()).then(|| Charger {
+        rated_watts: number(adapter, "Watts").filter(|watts| *watts > 0.0),
+        rated_volts: milli(adapter, "AdapterVoltage"),
+        rated_amps: milli(adapter, "Current"),
+        input_watts: milli(telemetry, "SystemPowerIn"),
+        input_volts: milli(telemetry, "SystemVoltageIn"),
+        input_amps: milli(telemetry, "SystemCurrentIn"),
+        wireless: cf::boolean(cf::dict_get(adapter, "IsWireless")).unwrap_or(false),
+    });
     unsafe { CFRelease(properties) };
-    (health, cycles)
+    SmartBattery {
+        health,
+        cycles,
+        battery_watts,
+        charger,
+    }
 }

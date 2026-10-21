@@ -13,6 +13,8 @@ unsafe extern "C" {
     pub fn CFStringGetTypeID() -> usize;
     pub fn CFNumberGetTypeID() -> usize;
     pub fn CFDataGetTypeID() -> usize;
+    pub fn CFBooleanGetTypeID() -> usize;
+    pub fn CFBooleanGetValue(value: *const c_void) -> bool;
     pub fn CFStringCreateWithCString(
         allocator: *const c_void,
         cstr: *const c_char,
@@ -121,6 +123,13 @@ pub fn data_bytes(value: *const c_void) -> Option<Vec<u8>> {
         return None;
     }
     Some(unsafe { std::slice::from_raw_parts(pointer, length as usize) }.to_vec())
+}
+
+pub fn boolean(value: *const c_void) -> Option<bool> {
+    if value.is_null() || unsafe { CFGetTypeID(value) } != unsafe { CFBooleanGetTypeID() } {
+        return None;
+    }
+    Some(unsafe { CFBooleanGetValue(value) })
 }
 
 pub fn number_f64(value: *const c_void) -> Option<f64> {

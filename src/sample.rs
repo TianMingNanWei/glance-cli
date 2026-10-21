@@ -35,10 +35,6 @@ impl Sampler {
         sampler
     }
 
-    pub fn set_sort_by_memory(&mut self, enabled: bool) {
-        self.processes.sort_by_memory = enabled;
-    }
-
     pub fn sample(&mut self, include_processes: bool) -> Snapshot {
         self.host.uptime_seconds = host::uptime_seconds();
         let mut cpu = self.cpu.sample();

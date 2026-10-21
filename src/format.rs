@@ -49,26 +49,3 @@ pub fn duration(seconds: u64) -> String {
         format!("{minutes}m")
     }
 }
-
-/// Block chart. `scale` is the value that fills the row; `None` uses the series peak.
-pub fn sparkline(values: &[f64], width: usize, scale: Option<f64>) -> String {
-    const TICKS: [&str; 9] = [" ", "▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"];
-    if width == 0 || values.is_empty() {
-        return String::new();
-    }
-    let peak = scale.unwrap_or_else(|| values.iter().copied().fold(0.0, f64::max).max(1e-9));
-    let start = values.len().saturating_sub(width);
-    values[start..]
-        .iter()
-        .map(|value| {
-            let index = ((value / peak).clamp(0.0, 1.0) * 8.0).round() as usize;
-            TICKS[index.min(8)]
-        })
-        .collect()
-}
-
-pub fn meter(fraction: f64, width: usize) -> String {
-    let width = width.max(1);
-    let filled = (fraction.clamp(0.0, 1.0) * width as f64).round() as usize;
-    format!("{}{}", "█".repeat(filled), "░".repeat(width - filled))
-}

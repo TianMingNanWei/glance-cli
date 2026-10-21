@@ -90,6 +90,25 @@ pub struct Battery {
     pub fraction: f64,
     pub health: Option<f64>,
     pub cycles: Option<u32>,
+    pub charging: bool,
+    pub external_power: bool,
+    pub minutes_remaining: Option<u32>,
+    /// Positive while charging, negative while discharging.
+    pub battery_watts: Option<f64>,
+    pub charger: Option<Charger>,
+}
+
+/// The connected power adapter: what it is rated for and what the Mac draws from it now.
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Charger {
+    pub rated_watts: Option<f64>,
+    pub rated_volts: Option<f64>,
+    pub rated_amps: Option<f64>,
+    pub input_watts: Option<f64>,
+    pub input_volts: Option<f64>,
+    pub input_amps: Option<f64>,
+    pub wireless: bool,
 }
 
 #[derive(Clone, Debug, Serialize)]

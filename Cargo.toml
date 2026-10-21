@@ -4,6 +4,13 @@ version = "0.1.0"
 edition = "2021"
 description = "Full-screen command-line system monitor for macOS"
 authors = ["SunJiaxuan"]
+license = "MIT"
+repository = "https://github.com/TianMingNanWei/glance-cli"
+homepage = "https://github.com/TianMingNanWei/glance-cli"
+readme = "README.md"
+keywords = ["macos", "system-monitor", "tui", "apple-silicon", "btop"]
+categories = ["command-line-utilities"]
+rust-version = "1.85"
 publish = false
 
 [[bin]]
