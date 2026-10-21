@@ -1,0 +1,57 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build (universal)
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin, x86_64-apple-darwin
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build Apple silicon
+        run: cargo build --release --locked --target aarch64-apple-darwin
+
+      - name: Build Intel
+        run: cargo build --release --locked --target x86_64-apple-darwin
+
+      - name: Merge into a universal binary
+        run: |
+          mkdir -p dist
+          lipo -create -output dist/glance \
+            target/aarch64-apple-darwin/release/glance \
+            target/x86_64-apple-darwin/release/glance
+          lipo -info dist/glance
+
+      - name: Smoke test
+        run: |
+          dist/glance --version
+          dist/glance about
+          dist/glance snapshot
+          dist/glance snapshot --json | python3 -c "import json, sys; json.load(sys.stdin)"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: glance-universal-${{ github.sha }}
+          path: dist/glance
+          retention-days: 14

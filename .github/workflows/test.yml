@@ -1,0 +1,60 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        # The oldest supported macOS and the newest runner.
+        os: [macos-14, macos-26]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Format
+        run: cargo fmt --check
+
+      - name: Lint
+        run: cargo clippy --all-targets --locked -- -D warnings
+
+      - name: Unit tests
+        run: cargo test --locked
+
+      - name: Render a frame off screen
+        run: GLANCE_COLS=120 GLANCE_ROWS=34 cargo test --locked render_preview -- --ignored
+
+  msrv:
+    name: Minimum Rust (1.85)
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@1.85
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Check
+        run: cargo check --all-targets --locked

@@ -6,6 +6,9 @@
 
 Every core, the GPU, the Neural Engine, power, temperature, memory, network, disk, battery, charger, and processes — on one animated screen, without root.
 
+[![Test](https://github.com/TianMingNanWei/glance-cli/actions/workflows/test.yml/badge.svg)](https://github.com/TianMingNanWei/glance-cli/actions/workflows/test.yml)
+[![Build](https://github.com/TianMingNanWei/glance-cli/actions/workflows/build.yml/badge.svg)](https://github.com/TianMingNanWei/glance-cli/actions/workflows/build.yml)
+[![Release](https://img.shields.io/github/v/release/TianMingNanWei/glance-cli)](https://github.com/TianMingNanWei/glance-cli/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-macOS%2014%2B-black)
 ![Apple silicon](https://img.shields.io/badge/Apple-silicon-orange)
@@ -50,11 +53,23 @@ Every core, the GPU, the Neural Engine, power, temperature, memory, network, dis
 
 ## Install
 
-Requires macOS 14 or later on Apple silicon and Rust 1.85 or later ([rustup.rs](https://rustup.rs)).
+Requires macOS 14 or later. Power, frequency, and Neural Engine readings need Apple silicon.
+
+Download the universal binary from the [latest release](https://github.com/TianMingNanWei/glance-cli/releases/latest):
+
+```bash
+curl -LO https://github.com/TianMingNanWei/glance-cli/releases/download/v0.1.0/glance-0.1.0-macos-universal.tar.gz
+tar -xzf glance-0.1.0-macos-universal.tar.gz
+sudo install glance-0.1.0-macos-universal/glance /usr/local/bin/glance
+glance
+```
+
+The binary is not notarized. If you download it with a browser, run `xattr -d com.apple.quarantine glance` first.
+
+Or install with Cargo, which needs Rust 1.85 or later ([rustup.rs](https://rustup.rs)):
 
 ```bash
 cargo install --git https://github.com/TianMingNanWei/glance-cli
-glance
 ```
 
 Or build from a clone:
@@ -153,6 +168,13 @@ The output above is trimmed. The real output also includes per-core load, memory
 cargo test --release                # unit tests
 cargo fmt && cargo build --release  # format and build
 ```
+
+Every push and pull request runs two required checks:
+
+- **Test**: `cargo fmt --check`, `cargo clippy -D warnings`, unit tests, and an off-screen frame on macOS 14 and macOS 26, plus `cargo check` on Rust 1.85.
+- **Build**: release builds for Apple silicon and Intel, merged into a universal binary, smoke-tested, and uploaded as an artifact.
+
+Pushing a `v*` tag that matches the version in `Cargo.toml` runs **Release**, which tests, builds, packages universal, arm64, and x86_64 archives with `SHA256SUMS`, and publishes a GitHub release using that version's section of [CHANGELOG.md](CHANGELOG.md).
 
 `render_preview` draws one real frame off screen, which helps when changing the layout:
 
