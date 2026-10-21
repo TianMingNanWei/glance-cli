@@ -660,7 +660,7 @@ fn header(frame: &mut Frame, area: Rect, app: &App, snapshot: &Snapshot) {
 
 fn footer(frame: &mut Frame, area: Rect, app: &App) {
     if let Mode::Filter = app.mode {
-        let cursor = if (app.anim.now() * 2.0) as u64 % 2 == 0 || !app.anim.enabled {
+        let cursor = if ((app.anim.now() * 2.0) as u64).is_multiple_of(2) || !app.anim.enabled {
             "▌"
         } else {
             " "
