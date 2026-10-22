@@ -79,6 +79,16 @@ jobs:
 
           ## Install
 
+          With [Homebrew](https://github.com/TianMingNanWei/homebrew-tap):
+
+          \`\`\`bash
+          brew install tianmingnanwei/tap/glance
+          \`\`\`
+
+          Upgrade from an earlier version with \`brew update && brew upgrade glance\`.
+
+          Or download the universal binary:
+
           \`\`\`bash
           curl -LO https://github.com/${GITHUB_REPOSITORY}/releases/download/v${VERSION}/glance-${VERSION}-macos-universal.tar.gz
           tar -xzf glance-${VERSION}-macos-universal.tar.gz

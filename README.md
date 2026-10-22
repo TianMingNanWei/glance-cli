@@ -9,6 +9,7 @@ Every core, the GPU, the Neural Engine, power, temperature, memory, network, dis
 [![Test](https://github.com/TianMingNanWei/glance-cli/actions/workflows/test.yml/badge.svg)](https://github.com/TianMingNanWei/glance-cli/actions/workflows/test.yml)
 [![Build](https://github.com/TianMingNanWei/glance-cli/actions/workflows/build.yml/badge.svg)](https://github.com/TianMingNanWei/glance-cli/actions/workflows/build.yml)
 [![Release](https://img.shields.io/github/v/release/TianMingNanWei/glance-cli)](https://github.com/TianMingNanWei/glance-cli/releases/latest)
+[![Homebrew](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fraw.githubusercontent.com%2FTianMingNanWei%2Fhomebrew-tap%2Fmain%2FFormula%2Fglance.rb&search=download%2Fv%28%5B0-9.%5D%2B%29%2F&replace=v%241&label=homebrew&logo=homebrew&logoColor=white&color=FBB040)](https://github.com/TianMingNanWei/homebrew-tap)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-macOS%2014%2B-black)
 ![Apple silicon](https://img.shields.io/badge/Apple-silicon-orange)
