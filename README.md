@@ -55,7 +55,16 @@ Every core, the GPU, the Neural Engine, power, temperature, memory, network, dis
 
 Requires macOS 14 or later. Power, frequency, and Neural Engine readings need Apple silicon.
 
-Download the universal binary from the [latest release](https://github.com/TianMingNanWei/glance-cli/releases/latest):
+Install with [Homebrew](https://brew.sh) from the [TianMingNanWei/tap](https://github.com/TianMingNanWei/homebrew-tap) tap:
+
+```bash
+brew install tianmingnanwei/tap/glance
+glance
+```
+
+Upgrade later with `brew upgrade glance`.
+
+Or download the universal binary from the [latest release](https://github.com/TianMingNanWei/glance-cli/releases/latest):
 
 ```bash
 curl -LO https://github.com/TianMingNanWei/glance-cli/releases/download/v0.1.0/glance-0.1.0-macos-universal.tar.gz
