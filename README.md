@@ -67,9 +67,9 @@ Upgrade later with `brew upgrade glance`.
 Or download the universal binary from the [latest release](https://github.com/TianMingNanWei/glance-cli/releases/latest):
 
 ```bash
-curl -LO https://github.com/TianMingNanWei/glance-cli/releases/download/v0.1.0/glance-0.1.0-macos-universal.tar.gz
-tar -xzf glance-0.1.0-macos-universal.tar.gz
-sudo install glance-0.1.0-macos-universal/glance /usr/local/bin/glance
+curl -LO https://github.com/TianMingNanWei/glance-cli/releases/download/v0.1.1/glance-0.1.1-macos-universal.tar.gz
+tar -xzf glance-0.1.1-macos-universal.tar.gz
+sudo install glance-0.1.1-macos-universal/glance /usr/local/bin/glance
 glance
 ```
 
