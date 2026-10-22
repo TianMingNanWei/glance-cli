@@ -14,6 +14,10 @@ use std::io::{self, IsTerminal};
 use std::time::Instant;
 
 fn main() {
+    // Exit quietly when a reader such as `head` closes the pipe, instead of panicking in println!.
+    unsafe {
+        libc::signal(libc::SIGPIPE, libc::SIG_DFL);
+    }
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.first().map(String::as_str) {
         Some("-h") | Some("--help") | Some("help") => print_help(),
