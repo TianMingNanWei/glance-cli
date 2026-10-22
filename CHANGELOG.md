@@ -2,6 +2,16 @@
 
 All notable changes to Glance CLI are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org).
 
+## [0.1.1] - 2026-10-22
+
+### Fixed
+
+- `glance snapshot` and `glance snapshot --json` no longer panic with "Broken pipe" when piped into a command that stops reading early, such as `head`.
+
+### Install
+
+- Homebrew: `brew install tianmingnanwei/tap/glance`.
+
 ## [0.1.0] - 2026-10-21
 
 The first release.
@@ -25,4 +35,5 @@ The first release.
 
 - Nothing needs root. Fan speed is not shown, and GPU frequency appears only when a matching clock table exists.
 
+[0.1.1]: https://github.com/TianMingNanWei/glance-cli/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/TianMingNanWei/glance-cli/releases/tag/v0.1.0
